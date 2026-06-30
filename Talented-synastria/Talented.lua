@@ -64,6 +64,16 @@ Talented.SYNASTRIA_DEFAULT_MISC_OPTIONS = {
 
 Talented.SYNASTRIA_DEFAULT_TRACKING = {"Minerals", "Herbs"}
 
+local function GetCacheKey(talentGroup)
+    local characterName = UnitName("player")
+    local realmName = GetRealmName()
+    if not characterName or not realmName then
+        return talentGroup -- Fallback if called before player data is fully loaded
+    end
+    return string.format("%s-%s:%d", characterName, realmName, talentGroup)
+end
+
+
 function Talented:IsSynastriaDataReady()
 	if type(GetCustomGameData) ~= "function" then
 		return true
@@ -2014,14 +2024,15 @@ do
 			return
 		end
 
-		for talentGroup = 1, 6 do
-			if not profile.specNames[talentGroup] then
-				local serverName = GetCustomGameDataString(21, talentGroup)
-				if serverName and serverName ~= "" then
-					profile.specNames[talentGroup] = serverName
-				end
-			end
-		end
+	    for talentGroup = 1, 6 do
+	        local cacheKey = GetCacheKey(talentGroup)
+	        local serverName = GetCustomGameDataString(21, talentGroup)
+	        
+	        -- Always respect the server data if it exists to keep characters synchronized
+	        if serverName and serverName ~= "" then
+	            profile.specNames[cacheKey] = serverName
+	        end
+	    end
 	end
 
 	function Talented:PLAYER_ENTERING_WORLD()
@@ -2973,6 +2984,7 @@ end
 function Talented:GetTalentGroupName(talentGroup)
 	if self.db and self.db.profile then
 		self.db.profile.specNames = self.db.profile.specNames or {}
+        local cacheKey = GetCacheKey(cacheKey)
 		local savedName = self.db.profile.specNames[talentGroup]
 		if savedName and savedName ~= "" then
 			return savedName
@@ -2980,7 +2992,7 @@ function Talented:GetTalentGroupName(talentGroup)
 		if GetCustomGameDataString then
 			local serverName = GetCustomGameDataString(21, talentGroup)
 			if serverName and serverName ~= "" then
-				self.db.profile.specNames[talentGroup] = serverName
+				self.db.profile.specNames[cacheKey] = serverName
 				return serverName
 			end
 		end
@@ -3005,7 +3017,8 @@ function Talented:SetTalentGroupName(talentGroup, name)
 	end
 	if self.db and self.db.profile then
 		self.db.profile.specNames = self.db.profile.specNames or {}
-		self.db.profile.specNames[talentGroup] = value
+		local cacheKey = GetCacheKey(talentGroup)
+		self.db.profile.specNames[cacheKey] = value
 	end
 	if type(SetCustomGameDataString) == "function" then
 		pcall(SetCustomGameDataString, 21, talentGroup, value)
@@ -3024,7 +3037,8 @@ function Talented:ClearTalentGroupName(talentGroup)
 		return false
 	end
 	if self.db and self.db.profile and self.db.profile.specNames then
-		self.db.profile.specNames[talentGroup] = nil
+		local cacheKey = GetCacheKey(talentGroup)
+		self.db.profile.specNames[cacheKey] = nil
 	end
 	if type(SetCustomGameDataString) == "function" then
 		pcall(SetCustomGameDataString, 21, talentGroup, "")
