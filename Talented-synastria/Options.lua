@@ -184,7 +184,6 @@ Talented.defaults = {
 		framepos = {},
 		glyph_on_talent_swap = "active",
 		restore_bars = false,
-		specNames = {},
 		debug_classswitch = false,
 		synastria_default_perks = BuildSynastriaDefaultPerksDefaults()
 	},
@@ -192,7 +191,10 @@ Talented.defaults = {
 		templates = {},
 		communityBuilds = {}
 	},
-	char = {targets = {}}
+	char = {
+		specNames = {},
+		targets = {}
+	}
 }
 
 function Talented:SetOption(info, value)
