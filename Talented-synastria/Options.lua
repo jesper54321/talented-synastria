@@ -385,6 +385,19 @@ function Talented:UpgradeOptions()
 		c.targets[1] = c.target
 		c.target = nil
 	end
+	c.specNames = c.specNames or {}
+	if p.specNames then
+		for key, name in pairs(p.specNames) do
+			local tg = type(key) == "number" and key
+			if not tg and type(key) == "string" then
+				tg = tonumber(key:match(":(%d+)$"))
+			end
+			if tg and type(name) == "string" and name ~= "" and not c.specNames[tg] then
+				c.specNames[tg] = name
+			end
+		end
+		p.specNames = nil
+	end
 	local g = self.db.global
 	if not g.communityBuilds then
 		g.communityBuilds = {}
