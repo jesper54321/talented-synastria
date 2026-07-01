@@ -2009,6 +2009,9 @@ do
 		local characterKey = GetCharacterIconKey(baseKey)
 		if type(iconPath) == "string" and iconPath ~= "" then
 			profile.specIconPaths[characterKey] = iconPath
+			profile.specIconTabs[characterKey] = nil
+			profile.specIconPaths[baseKey] = nil
+			profile.specIconTabs[baseKey] = nil
 		else
 			profile.specIconPaths[characterKey] = nil
 		end
