@@ -8,15 +8,6 @@ local NORMAL_FONT_COLOR = NORMAL_FONT_COLOR
 local min, max = math.min, math.max
 local GameTooltip = GameTooltip
 
-local function GetCharacterIconKey(baseKey)
-	local characterName = UnitName("player")
-	local serverName = GetRealmName()
-	if characterName and serverName then
-		return characterName .. "-" .. serverName .. "-" .. baseKey
-	end
-	return baseKey
-end
-
 -------------------------------------------------------------------------------
 -- ui\pool.lua - Talented.Pool
 --
@@ -1886,23 +1877,21 @@ do
 				imax, max = i, cache.points
 			end
 		end
-		local profile = Talented.db and Talented.db.profile
-		local iconMap = profile and profile.specIconTabs
-		if profile and not iconMap then
-			profile.specIconTabs = {}
-			iconMap = profile.specIconTabs
+		local char = Talented.db and Talented.db.char
+		local iconMap = char and char.specIconTabs
+		if char and not iconMap then
+			char.specIconTabs = {}
+			iconMap = char.specIconTabs
 		end
-		
-		-- FIX: Use the character-bound key instead of the generic account-wide key
-		local baseKey = info.pet and "petspec1" or ("spec" .. tostring(talentGroup or 1))
-		local characterKey = GetCharacterIconKey(baseKey)
-		
-		local primary = iconMap and iconMap[characterKey]
+
+		local iconKey = info.pet and "petspec1" or ("spec" .. tostring(talentGroup or 1))
+
+		local primary = iconMap and iconMap[iconKey]
 		if type(primary) ~= "number" or primary < 1 or primary > tabs then
 			-- Lock icon to a stable tab on first sight to avoid auto-changing with point totals.
 			primary = imax > 0 and imax or 1
 			if iconMap then
-				iconMap[characterKey] = primary
+				iconMap[iconKey] = primary
 			end
 		end
 		info.primary = primary
@@ -1979,18 +1968,16 @@ do
 	}
 
 	local function SetSpecIconSelection(info, tabIndex)
-		local profile = Talented.db and Talented.db.profile
-		if not profile then
+		local char = Talented.db and Talented.db.char
+		if not char then
 			return
 		end
-		profile.specIconTabs = profile.specIconTabs or {}
-		-- FIX: Use the character-bound key
-		local baseKey = info.pet and "petspec1" or ("spec" .. tostring(info.talentGroup or 1))
-		local characterKey = GetCharacterIconKey(baseKey)
+		char.specIconTabs = char.specIconTabs or {}
+		local iconKey = info.pet and "petspec1" or ("spec" .. tostring(info.talentGroup or 1))
 		if type(tabIndex) == "number" and tabIndex > 0 then
-			profile.specIconTabs[characterKey] = tabIndex
+			char.specIconTabs[iconKey] = tabIndex
 		else
-			profile.specIconTabs[characterKey] = nil
+			char.specIconTabs[iconKey] = nil
 		end
 		if Talented.tabs and Talented.tabs.Update then
 			Talented.tabs:Update()
@@ -1998,22 +1985,18 @@ do
 	end
 
 	local function SetSpecIconPath(info, iconPath)
-		local profile = Talented.db and Talented.db.profile
-		if not profile then
+		local char = Talented.db and Talented.db.char
+		if not char then
 			return
 		end
-		profile.specIconTabs = profile.specIconTabs or {}
-		profile.specIconPaths = profile.specIconPaths or {}
-		-- FIX: Use the character-bound key
-		local baseKey = info.pet and "petspec1" or ("spec" .. tostring(info.talentGroup or 1))
-		local characterKey = GetCharacterIconKey(baseKey)
+		char.specIconTabs = char.specIconTabs or {}
+		char.specIconPaths = char.specIconPaths or {}
+		local iconKey = info.pet and "petspec1" or ("spec" .. tostring(info.talentGroup or 1))
 		if type(iconPath) == "string" and iconPath ~= "" then
-			profile.specIconPaths[characterKey] = iconPath
-			profile.specIconTabs[characterKey] = nil
-			profile.specIconPaths[baseKey] = nil
-			profile.specIconTabs[baseKey] = nil
+			char.specIconPaths[iconKey] = iconPath
+			char.specIconTabs[iconKey] = nil
 		else
-			profile.specIconPaths[characterKey] = nil
+			char.specIconPaths[iconKey] = nil
 		end
 		if Talented.tabs and Talented.tabs.Update then
 			Talented.tabs:Update()
@@ -2274,13 +2257,11 @@ do
 	local function TabFrame_Update(self)
 		local info = UpdateSpecInfo(specs[self.type])
 		if info then
-			local profile = Talented.db and Talented.db.profile
-			local iconPathMap = profile and profile.specIconPaths
-			-- FIX: Use the character-bound key
-			local baseKey = info.pet and "petspec1" or ("spec" .. tostring(info.talentGroup or 1))
-			local characterKey = GetCharacterIconKey(baseKey)
-			
-			local forcedIconPath = iconPathMap and iconPathMap[characterKey]
+			local char = Talented.db and Talented.db.char
+			local iconPathMap = char and char.specIconPaths
+			local iconKey = info.pet and "petspec1" or ("spec" .. tostring(info.talentGroup or 1))
+
+			local forcedIconPath = iconPathMap and iconPathMap[iconKey]
 			if type(forcedIconPath) == "string" and forcedIconPath ~= "" then
 				self.texture:SetTexture(forcedIconPath)
 			else

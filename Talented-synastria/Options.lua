@@ -193,6 +193,8 @@ Talented.defaults = {
 	},
 	char = {
 		specNames = {},
+		specIconTabs = {},
+		specIconPaths = {},
 		targets = {}
 	}
 }
@@ -368,7 +370,106 @@ function Talented:ReLayout()
 	self:ViewsReLayout(true)
 end
 
+local function mergeSavedTable(dst, src)
+	for k, v in pairs(src) do
+		if dst[k] == nil then
+			dst[k] = v
+		elseif type(v) == "table" and type(dst[k]) == "table" then
+			mergeSavedTable(dst[k], v)
+		end
+	end
+end
+
+function Talented:LegacyCharKey()
+	local name = UnitName("player")
+	local realm = GetRealmName()
+	if not name or not realm then
+		return
+	end
+	return name .. " - " .. realm
+end
+
+function Talented:BindGuidStorage()
+	local guid = type(UnitGUID) == "function" and UnitGUID("player") or nil
+	if type(guid) ~= "string" or guid == "" then
+		return false
+	end
+
+	local db = self.db
+	local sv = db and db.sv
+	if not sv then
+		return false
+	end
+
+	local legacy = self:LegacyCharKey()
+
+	sv.char = sv.char or {}
+	sv.profiles = sv.profiles or {}
+	sv.profileKeys = sv.profileKeys or {}
+
+	if legacy and legacy ~= guid then
+		if sv.char[legacy] then
+			sv.char[guid] = sv.char[guid] or {}
+			mergeSavedTable(sv.char[guid], sv.char[legacy])
+			sv.char[legacy] = nil
+		end
+		if sv.profiles[legacy] then
+			sv.profiles[guid] = sv.profiles[guid] or {}
+			mergeSavedTable(sv.profiles[guid], sv.profiles[legacy])
+			sv.profiles[legacy] = nil
+		end
+		sv.profileKeys[legacy] = nil
+	end
+
+	sv.char[guid] = sv.char[guid] or {}
+	sv.profiles[guid] = sv.profiles[guid] or {}
+	sv.profileKeys[guid] = guid
+
+	if db.keys.char ~= guid then
+		db.keys.char = guid
+		rawset(db, "char", nil)
+	end
+	if db.keys.profile ~= guid then
+		db.keys.profile = guid
+		rawset(db, "profile", nil)
+	end
+
+	return true
+end
+
+function Talented:EnsureDB()
+	if self.db then
+		self:BindGuidStorage()
+		return true
+	end
+
+	local guid = type(UnitGUID) == "function" and UnitGUID("player") or nil
+	if type(guid) ~= "string" or guid == "" then
+		return false
+	end
+
+	self.db = LibStub("AceDB-3.0-Talented"):New("TalentedDB_Guid", self.defaults)
+	if self.UpgradeOptions then
+		self:UpgradeOptions()
+	end
+	if self.LoadTemplates then
+		self:LoadTemplates()
+	end
+
+	if not self.dbOptionsRegistered then
+		local AceDBOptions = LibStub("AceDBOptions-3.0", true)
+		if AceDBOptions then
+			self.options.args.profiles = AceDBOptions:GetOptionsTable(self.db)
+			self.options.args.profiles.order = 200
+		end
+		self.dbOptionsRegistered = true
+	end
+
+	return true
+end
+
 function Talented:UpgradeOptions()
+	self:BindGuidStorage()
 	local p = self.db.profile
 	if p.point or p.offsetx or p.offsety then
 		local opts = {
@@ -398,6 +499,26 @@ function Talented:UpgradeOptions()
 		end
 		p.specNames = nil
 	end
+	c.specIconTabs = c.specIconTabs or {}
+	c.specIconPaths = c.specIconPaths or {}
+	if p.specIconTabs then
+		for key, tabIndex in pairs(p.specIconTabs) do
+			local baseKey = type(key) == "string" and key:match("(spec%d+|petspec1)$")
+			if baseKey and type(tabIndex) == "number" and not c.specIconTabs[baseKey] then
+				c.specIconTabs[baseKey] = tabIndex
+			end
+		end
+		p.specIconTabs = nil
+	end
+	if p.specIconPaths then
+		for key, iconPath in pairs(p.specIconPaths) do
+			local baseKey = type(key) == "string" and key:match("(spec%d+|petspec1)$")
+			if baseKey and type(iconPath) == "string" and iconPath ~= "" and not c.specIconPaths[baseKey] then
+				c.specIconPaths[baseKey] = iconPath
+			end
+		end
+		p.specIconPaths = nil
+	end
 	local g = self.db.global
 	if not g.communityBuilds then
 		g.communityBuilds = {}
@@ -419,7 +540,7 @@ end
 
 function Talented:LoadFramePosition(frame)
 	if not self.db then
-		self:OnInitialize()
+		self:EnsureDB()
 	end
 	local data = self.db.profile.framepos[frame:GetName()]
 	if data and data.anchor then
