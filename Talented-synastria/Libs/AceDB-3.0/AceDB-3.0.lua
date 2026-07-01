@@ -40,7 +40,7 @@
 -- @class file
 -- @name AceDB-3.0.lua
 -- @release $Id: AceDB-3.0.lua 940 2010-06-19 08:01:47Z nevcairiel $
-local ACEDB_MAJOR, ACEDB_MINOR = "AceDB-3.0", 22
+local ACEDB_MAJOR, ACEDB_MINOR = "AceDB-3.0-Talented", 1
 local AceDB, oldminor = LibStub:NewLibrary(ACEDB_MAJOR, ACEDB_MINOR)
 
 if not AceDB then return end -- No upgrade needed
@@ -257,8 +257,7 @@ local preserve_keys = {
 local function resolvePlayerDBKeys()
 	local realmKey = GetRealmName()
 	local guid = type(UnitGUID) == "function" and UnitGUID("player") or nil
-	local charKey = (type(guid) == "string" and guid ~= "") and guid
-		or ((UnitName("player") or UNKNOWN) .. " - " .. realmKey)
+	local charKey = (type(guid) == "string" and guid ~= "") and guid or ""
 	local _, classKey = UnitClass("player")
 	local _, raceKey = UnitRace("player")
 	local factionKey = UnitFactionGroup("player")
@@ -276,13 +275,17 @@ local function initdb(sv, defaults, defaultProfile, olddb, parent)
 
 	local profileKey
 	if not parent then
-		-- Make a container for profile keys
 		if not sv.profileKeys then sv.profileKeys = {} end
 
-		-- Try to get the profile selected from the char db
-		profileKey = sv.profileKeys[charKey] or defaultProfile or charKey
-
-		-- save the selected profile for later
+		if charKey ~= "" then
+			if not sv.profiles then sv.profiles = {} end
+			if not sv.profiles[charKey] then
+				sv.profiles[charKey] = {}
+			end
+			profileKey = charKey
+		else
+			profileKey = sv.profileKeys[charKey] or defaultProfile or "Default"
+		end
 		sv.profileKeys[charKey] = profileKey
 	else
 		-- Use the profile of the parents DB
@@ -428,6 +431,10 @@ end
 function DBObjectLib:SetProfile(name)
 	if type(name) ~= "string" then
 		error("Usage: AceDBObject:SetProfile(name): 'name' - string expected.", 2)
+	end
+
+	if self.keys.char ~= "" then
+		name = self.keys.char
 	end
 
 	-- changing to the same profile, dont do anything

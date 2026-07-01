@@ -1757,14 +1757,13 @@ do
 	end
 
 	function Talented:OnInitialize()
-		self.db = LibStub("AceDB-3.0"):New("TalentedDB_Guid", self.defaults)
-		self:UpgradeOptions()
-		self:LoadTemplates()
+		self:EnsureDB()
 
 		local AceDBOptions = LibStub("AceDBOptions-3.0", true)
-		if AceDBOptions then
+		if AceDBOptions and self.db and not self.dbOptionsRegistered then
 			self.options.args.profiles = AceDBOptions:GetOptionsTable(self.db)
 			self.options.args.profiles.order = 200
+			self.dbOptionsRegistered = true
 		end
 
 		LibStub("AceConfig-3.0"):RegisterOptionsTable("Talented", self.options)
@@ -2022,6 +2021,7 @@ do
 	end
 
 	function Talented:PLAYER_ENTERING_WORLD()
+		self:EnsureDB()
 		-- Update player specs and perk menu
 		if self:IsCustomTalentEnvironment() then
 			self:BootstrapNativeClassButtons()
